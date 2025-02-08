@@ -1,18 +1,23 @@
 # Use UBI image with Maven and OpenJDK 17 for build stage
-FROM registry.access.redhat.com/ubi8/openjdk-17:latest AS build
+FROM registry.access.redhat.com/ubi8/openjdk-17 AS build
 
 # Set working directory
 WORKDIR /opt/app-root/src
 
-# Copy Maven project files
-COPY pom.xml .
+# Copy only the pom.xml first (to optimize caching)
+COPY pom.xml ./
+
+# Download dependencies
+RUN mvn dependency:resolve
+
+# Copy application source code
 COPY src ./src
 
 # Build application
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -X
 
 # Use a minimal OpenJDK 17 image for the final runtime stage
-FROM registry.access.redhat.com/ubi8/openjdk-17-runtime:latest AS final
+FROM registry.access.redhat.com/ubi8/openjdk-17-runtime AS final
 
 # Set working directory
 WORKDIR /opt/app-root/src
